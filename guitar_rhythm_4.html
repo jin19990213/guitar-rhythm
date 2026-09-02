@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>吉他節奏序列器 - GP 出版級符號排版</title>
+  <style>
+    :root {
+      --bg: #121418;
+      --card-bg: #1a1e26;
+      --accent: #ff8400;
+      --accent-active: #22c55e;
+      --text: #f1f5f9;
+      --text-muted: #8492a6;
+      --border: #2d3748;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 980px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    header { text-align: center; }
+    h1 { font-size: 1.6rem; color: var(--accent); margin-bottom: 6px; }
+    p.sub { font-size: 0.85rem; color: var(--text-muted); }
+
+    /* 控制面板 */
+    .controls {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 20px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .btn-group { display: flex; gap: 10px; }
+    button {
+      background: #252d3d;
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    button:hover { background: #323d52; }
+    button.primary {
+      background: var(--accent);
+      color: #000;
+      border-color: var(--accent);
+    }
+    button.primary.playing {
+      background: #ef4444;
+      border-color: #ef4444;
+      color: #fff;
+    }
+    .bpm-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 600;
+    }
+    input[type=range] { accent-color: var(--accent); cursor: pointer; }
+
+    /* 小節 4 拍軌道區 */
+    .measure-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+    .beat-slot {
+      background: var(--card-bg);
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      min-height: 160px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      padding: 8px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .beat-slot.drag-over { border-color: var(--accent); background: #263043; }
+    .beat-slot.active {
+      border-color: var(--accent-active);
+      box-shadow: 0 0 16px rgba(34, 197, 94, 0.35);
+      transform: translateY(-2px);
+    }
+    .beat-number {
+      position: absolute;
+      top: 6px;
+      left: 10px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 700;
+    }
+
+    /* 模塊樣式 */
+    .rhythm-block {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      user-select: none;
+    }
+    .svg-container {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 4px 0;
+    }
+    .strum-row {
+      display: flex;
+      gap: 12px;
+      font-size: 0.75rem;
+      font-family: monospace;
+      color: var(--text-muted);
+    }
+    .strum-row span.hit { color: var(--accent); font-weight: bold; }
+    .label-code { font-size: 0.75rem; color: #94a3b8; font-weight: 600; font-family: monospace; }
+
+    /* 庫區 */
+    .palette-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .palette-title { font-size: 0.95rem; font-weight: 600; color: var(--text-muted); }
+    .palette-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 10px;
+    }
+    .palette-item {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: grab;
+      transition: all 0.15s ease;
+    }
+    .palette-item:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
+    .palette-item:active { cursor: grabbing; }
+    .preset-num {
+      align-self: flex-start;
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 2px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>吉他十六分節奏積木 (清晰排版版)</h1>
+    <p class="sub">加寬排版間距 × 標準休止符輪廓 × 乾淨避讓不重疊</p>
+  </header>
+
+  <!-- 控制列 -->
+  <div class="controls">
+    <div class="btn-group">
+      <button id="playBtn" class="primary">播放 ▶</button>
+      <button id="randomBtn">隨機 🎲</button>
+      <button id="clearBtn">重設 (四分音符)</button>
+    </div>
+    <div class="bpm-wrapper">
+      <span>BPM: <span id="bpmVal">90</span></span>
+      <input type="range" id="bpmSlider" min="40" max="180" value="90">
+    </div>
+  </div>
+
+  <!-- 小節 4 拍 -->
+  <div class="measure-grid" id="measureGrid">
+    <div class="beat-slot" data-slot="0"><span class="beat-number">BEAT 1</span></div>
+    <div class="beat-slot" data-slot="1"><span class="beat-number">BEAT 2</span></div>
+    <div class="beat-slot" data-slot="2"><span class="beat-number">BEAT 3</span></div>
+    <div class="beat-slot" data-slot="3"><span class="beat-number">BEAT 4</span></div>
+  </div>
+
+  <!-- 16 種模塊庫 -->
+  <div>
+    <div class="palette-header">
+      <span class="palette-title">點擊或拖曳模塊至上方 4 拍：</span>
+    </div>
+    <div class="palette-grid" id="paletteGrid"></div>
+  </div>
+</div>
+
+<script>
+  const RHYTHM_PRESETS = [
+    { id: 1,  pattern: [1, 0, 0, 0], desc: "1 _ _ _", name: "四分音符" },
+    { id: 2,  pattern: [1, 0, 1, 0], desc: "1 _ 3 _", name: "雙八分" },
+    { id: 3,  pattern: [1, 1, 1, 1], desc: "1 2 3 4", name: "四個十六分" },
+    { id: 4,  pattern: [1, 0, 1, 1], desc: "1 _ 3 4", name: "前八後十六" },
+    { id: 5,  pattern: [1, 1, 1, 0], desc: "1 2 3 _", name: "前十六後八" },
+    { id: 6,  pattern: [1, 1, 0, 1], desc: "1 2 _ 4", name: "夾心十六" },
+    { id: 7,  pattern: [1, 0, 0, 1], desc: "1 _ _ 4", name: "前附點八分" },
+    { id: 8,  pattern: [1, 1, 0, 0], desc: "1 2 _ _", name: "前半雙十六+八分休" },
+    { id: 9,  pattern: [0, 0, 0, 0], desc: "_ _ _ _", name: "四分休止" },
+    { id: 10, pattern: [0, 1, 0, 0], desc: "_ 2 _ _", name: "十六休+十六+八休" },
+    { id: 11, pattern: [0, 0, 1, 0], desc: "_ _ 3 _", name: "八分休+八分音" },
+    { id: 12, pattern: [0, 0, 0, 1], desc: "_ _ _ 4", name: "附點八分休+十六" },
+    { id: 13, pattern: [0, 1, 1, 0], desc: "_ 2 3 _", name: "中雙十六+前後休" },
+    { id: 14, pattern: [0, 1, 0, 1], desc: "_ 2 _ 4", name: "交替雙反拍十六" },
+    { id: 15, pattern: [0, 0, 1, 1], desc: "_ _ 3 4", name: "八分休+雙十六" },
+    { id: 16, pattern: [0, 1, 1, 1], desc: "_ 2 3 4", name: "十六休+後三連十六" },
+  ];
+
+  const strumSymbols = ["↓", "↑", "↓", "↑"];
+
+  // 標準出版級音樂符號字型輪廓 (Bravura / SMuFL 標準幾何)
+  // 八分休止符
+  function drawRest8(x, y) {
+    return `
+      <g transform="translate(${x}, ${y}) scale(0.9)">
+        <circle cx="-1" cy="-5" r="2.2" fill="#94a3b8"/>
+        <path d="M -1,-2.8 C 1.5,-2.8 3,-0.5 1,2.5 L -3,13.5" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" fill="none"/>
+      </g>
+    `;
+  }
+
+  // 十六分休止符（雙鈎，垂直排開不重疊）
+  function drawRest16(x, y) {
+    return `
+      <g transform="translate(${x}, ${y}) scale(0.9)">
+        <circle cx="-1" cy="-9" r="2" fill="#94a3b8"/>
+        <path d="M -1,-7 C 1.5,-7 2.8,-5.5 1,-3" stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+        <circle cx="-1" cy="-2" r="2" fill="#94a3b8"/>
+        <path d="M -1,0 C 1.5,0 2.8,1.5 1,4 L -3,14" stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round" fill="none"/>
+      </g>
+    `;
+  }
+
+  // 四分休止符（俐落幾何折線）
+  function drawRestQuarter(x, y) {
+    return `
+      <g transform="translate(${x}, ${y})">
+        <path d="M -3,-14 L 3,-6 L -3,1 L 3,7 C 1,11 -2,14 1,17" 
+              stroke="#94a3b8" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </g>
+    `;
+  }
+
+  // 標準音符（實心斜橢圓頭 + 垂直符幹）
+  function drawNote(x, headY, stemTop) {
+    return `
+      <ellipse cx="${x}" cy="${headY}" rx="4.5" ry="3.3" transform="rotate(-18 ${x} ${headY})" fill="#f1f5f9"/>
+      <line x1="${x+4.1}" y1="${headY}" x2="${x+4.1}" y2="${stemTop}" stroke="#f1f5f9" stroke-width="2"/>
+    `;
+  }
+
+  // 拓寬座標後的精確排版（寬度由 92 拓寬至 110，給予充分橫向留白）
+  function generateCleanNotationSVG(id) {
+    const x = [16, 42, 68, 94]; // 拓寬間距至 26px，確保各細分點互不干擾
+    const top = 10;
+    const b2 = 16;
+    const hY = 40;
+    const rY = 26;
+
+    let c = '';
+
+    switch(id) {
+      case 1: // 1 _ _ _
+        c += drawNote(55, hY, 12);
+        break;
+
+      case 2: // 1 _ 3 _
+        c += `<line x1="${x[0]+4.1}" y1="${top}" x2="${x[2]+4.1}" y2="${top}" stroke="#f1f5f9" stroke-width="3"/>`;
+        c += drawNote(x[0], hY, top);
+        c += drawNote(x[2], hY, top);
+        break;
+
+      case 3: // 1 2 3 4
+        c += `<line x1="${x[0]+4.1}" y1="${top}" x2="${x[3]+4.1}" y2="${top}" stroke="#f1f5f9" stroke-width="3"/>`;
+        c += `<line x1="${x[0]+4.1}" y1="${b2}" x2="${x[3]+4.1}" y2="${b2}" stroke="#f1f5f9" stroke-width="2.5"/>`;
+        x.forEach(pos => { c += drawNote(pos, hY, top); });
+        break;
+
+      case 4: // 1 _ 3 4
+        c += `<line x1="${x[0]+4.1}" y1="${top}" x2="${x[3]+4.1}" y2="${top}" stroke="#f1f5f9" stroke-width="3"/>`;
+        c += `<line x1="${x[2]+4.1}" y1="${b2}" x2="${x[3]+4.1}" y2="${b2}" stroke="#f1f5f9" stroke-width="2.5"/>`;
+        c += drawNote(x[0], hY, top);
+        c += drawNote(x[2], hY, top);
+        c += drawNote(x[3], hY, top);
+        break;
+
+      case 5: // 1 2 3 _
+        c += `<line x1="${x[0]+4.1}" y1="${top}" x2="${x[2]+4.1}" y2="${top}" stroke="#f1f5f9" stroke-width="3"/>`;
+        c += `<line x1="${x[0]+4.1}" y1="${b2}" x2="${x[1]+4.1}" y2="${b2}" stroke="#f1f5f9" stroke-width="2.5"/>`;
+        c += drawNote(x[0], hY, top);
+        c += drawNote(x[1], hY, top);
+        c += drawNote(x[2], hY, top);
+        break;
+
+      case 6: // 1 2 _ 4 (夾心十六：橫樑乾淨跳過休止符)
+        c += `<line x1="${x[0]+4.1}" y1="${top}" x2="${x[1]+4.1}" y2="${top}" stroke="#f1f5f9" stroke-width="3"/>`;
+        c += `<line x1="${x[0]+4.1}" y1="${b2}" x2="${x[1]+4.1}" y2="${b2}" stroke="#f1f5f9" stroke-width="2.5"/>`;
+        c += drawNote(x[0], hY, top);
+        c += drawNote(x[1], hY, top);
+        c += drawRest16(x[2], rY); // 第 3 點是十六分休止符
+        c += drawNote(x[3], hY, 12);
+        // 第 4 點獨立十六分符尾
+        c += `<line x1="${x[3]+4.1}" y1="12" x2="${x[3]+11}" y2="16" stroke="#f1f5f9" stroke-width="2.2"/>`;
+        c += `<line x1="${x[3]+4.1}" y1="17" x2="${x[3]+11}" y2="21" stroke="#f1f5f9" stroke-width="2.2"/>`;
+        break;
+
+      case 7: // 1 _ _ 4 (前附點)
+        c += `<line x1="${x[0]+4.1}" y1="${top}" x2="${x[3]+4.1}" y2="${top}" stroke="#f1f5f9" stroke-width="3"/>`;
+        c += `<line x1="${x[3]+4.1}" y1="${b2}" x2="${x[3]-7}" y2="${b2}" stroke="#f1f5f9" stroke-width="2.5"/>`;
+        c += drawNote(x[0], hY, top);
+        c += `<circle cx="${x[0]+11}" cy="${hY}" r="2" fill="#f1f5f9"/>`; // 附點留白獨立
+        c += drawNote(x[3], hY, top);
+        break;
+
+      case 8: // 1 2 _ _ (前半雙十六 + 八分休止符)
+        c += `<line x1="${x[0]+4.1}" y1="${top}" x2="${x[1]+4.1}" y2="${top}" stroke="#f1f5f9" stroke-width="3"/>`;
+        c += `<line x1="${x[0]+4.1}" y1="${b2}" x2="${x[1]+4.1}" y2="${b2}" stroke="#f1f5f9" stroke-width="2.5"/>`;
+        c += drawNote(x[0], hY, top);
+        c += drawNote(x[1], hY, top);
+        c += drawRest8(81, rY); // 後半拍中央標準八分休止符
+        break;
+
+      case 9: // _ _ _ _
+        c += drawRestQuarter(55, rY);
+        break;
+
+      case 10: // _ 2 _ _ (十六休 + 十六音 + 八分休)
+        c += drawRest16(x[0], rY);
+        c += drawNote(x[1], hY, 12);
+        c += `<line x1="${x[1]+4.1}" y1="12" x2="${x[1]+11}" y2="16" stroke="#f1f5f9" stroke-width="2.2"/>`;
+        c += `<line x1="${x[1]+4.1}" y1="17" x2="${x[1]+11}" y2="21" stroke="#f1f5f9" stroke-width="2.2"/>`;
+        c += drawRest8(81, rY);
+        break;
+
+      case 11: // _ _ 3 _ (八分休 + 八分音)
+        c += drawRest8(29, rY);
+        c += drawNote(x[2], hY, 12);
+        c += `<line x1="${x[2]+4.1}" y1="12" x2="${x[2]+10}" y2="18" stroke="#f1f5f9" stroke-width="2.2"/>`;
+        break;
+
+      case 12: // _ _ _ 4 (附點八分休 + 十六音)
+        c += drawRest8(40, rY);
+        c += `<circle cx="50" cy="${rY+6}" r="2" fill="#94a3b8"/>`; // 附點八分休
+        c += drawNote(x[3], hY, 12);
+        c += `<line x1="${x[3]+4.1}" y1="12" x2="${x[3]+11}" y2="16" stroke="#f1f5f9" stroke-width="2.2"/>`;
+        c += `<line x1="${x[3]+4.1}" y1="17" x2="${x[3]+11}" y2="21" stroke="#f1f5f9" stroke-width="2.2"/>`;
+        break;
+
+      case 13: // _ 2 3 _ (十六休 + 雙十六 + 十六休)
+        c += drawRest16(x[0], rY);
+        c += `<line x1="${x[1]+4.1}" y1="${top}" x2="${x[2]+4.1}" y2="${top}" stroke="#f1f5f9" stroke-width="3"/>`;
+        c += `<line x1="${x[1]+4.1}" y1="${b2}" x2="${x[2]+4.1}" y2="${b2}" stroke="#f1f5f9" stroke-width="2.5"/>`;
+        c += drawNote(x[1], hY, top);
+        c += drawNote(x[2], hY, top);
+        c += drawRest16(x[3], rY);
+        break;
+
+      case 14: // _ 2 _ 4 (交替十六休與音符，無跨越連槓打架)
+        c += drawRest16(x[0], rY);
+        c += drawNote(x[1], hY, 12);
+        c += `<line x1="${x[1]+4.1}" y1="12" x2="${x[1]+11}" y2="16" stroke="#f1f5f9" stroke-width="2.2"/>`;
+        c += `<line x1="${x[1]+4.1}" y1="17" x2="${x[1]+11}" y2="21" stroke="#f1f5f9" stroke-width="2.2"/>`;
+        c += drawRest16(x[2], rY);
+        c += drawNote(x[3], hY, 12);
+        c += `<line x1="${x[3]+4.1}" y1="12" x2="${x[3]+11}" y2="16" stroke="#f1f5f9" stroke-width="2.2"/>`;
+        c += `<line x1="${x[3]+4.1}" y1="17" x2="${x[3]+11}" y2="21" stroke="#f1f5f9" stroke-width="2.2"/>`;
+        break;
+
+      case 15: // _ _ 3 4 (八分休 + 雙十六)
+        c += drawRest8(29, rY);
+        c += `<line x1="${x[2]+4.1}" y1="${top}" x2="${x[3]+4.1}" y2="${top}" stroke="#f1f5f9" stroke-width="3"/>`;
+        c += `<line x1="${x[2]+4.1}" y1="${b2}" x2="${x[3]+4.1}" y2="${b2}" stroke="#f1f5f9" stroke-width="2.5"/>`;
+        c += drawNote(x[2], hY, top);
+        c += drawNote(x[3], hY, top);
+        break;
+
+      case 16: // _ 2 3 4 (十六休 + 三連十六)
+        c += drawRest16(x[0], rY);
+        c += `<line x1="${x[1]+4.1}" y1="${top}" x2="${x[3]+4.1}" y2="${top}" stroke="#f1f5f9" stroke-width="3"/>`;
+        c += `<line x1="${x[1]+4.1}" y1="${b2}" x2="${x[3]+4.1}" y2="${b2}" stroke="#f1f5f9" stroke-width="2.5"/>`;
+        c += drawNote(x[1], hY, top);
+        c += drawNote(x[2], hY, top);
+        c += drawNote(x[3], hY, top);
+        break;
+    }
+
+    return `<svg viewBox="0 0 110 56" width="110" height="56">${c}</svg>`;
+  }
+
+  // 狀態
+  let measureState = [
+    { ...RHYTHM_PRESETS[0] },
+    { ...RHYTHM_PRESETS[0] },
+    { ...RHYTHM_PRESETS[0] },
+    { ...RHYTHM_PRESETS[0] }
+  ];
+
+  let selectedSlotIndex = 0;
+
+  function createBlockElement(preset, draggable = true) {
+    const el = document.createElement("div");
+    el.className = "rhythm-block";
+    if (draggable) {
+      el.draggable = true;
+      el.dataset.presetId = preset.id;
+    }
+
+    const strumHtml = preset.pattern.map((hit, idx) => `
+      <span class="${hit ? 'hit' : ''}">${hit ? strumSymbols[idx] : '·'}</span>
+    `).join("");
+
+    el.innerHTML = `
+      <div class="svg-container">${generateCleanNotationSVG(preset.id)}</div>
+      <div class="strum-row">${strumHtml}</div>
+      <div class="label-code">${preset.desc}</div>
+    `;
+
+    if (draggable) {
+      el.addEventListener("dragstart", (e) => {
+        e.dataTransfer.setData("text/plain", preset.id);
+      });
+    }
+    return el;
+  }
+
+  // 渲染庫
+  const paletteGrid = document.getElementById("paletteGrid");
+  RHYTHM_PRESETS.forEach((preset, index) => {
+    const item = document.createElement("div");
+    item.className = "palette-item";
+    item.draggable = true;
+
+    const numBadge = document.createElement("div");
+    numBadge.className = "preset-num";
+    numBadge.innerText = index + 1;
+    item.appendChild(numBadge);
+
+    item.appendChild(createBlockElement(preset, false));
+
+    item.addEventListener("dragstart", (e) => {
+      e.dataTransfer.setData("text/plain", preset.id);
+    });
+
+    item.addEventListener("click", () => {
+      assignPresetToSlot(selectedSlotIndex, preset.id);
+      selectedSlotIndex = (selectedSlotIndex + 1) % 4;
+      renderSlots();
+    });
+
+    paletteGrid.appendChild(item);
+  });
+
+  // 渲染 4 拍
+  const slots = document.querySelectorAll(".beat-slot");
+  function renderSlots() {
+    slots.forEach((slot, index) => {
+      const preset = measureState[index];
+      slot.innerHTML = `<span class="beat-number">BEAT ${index + 1}</span>`;
+      const blockEl = createBlockElement(preset, true);
+      slot.appendChild(blockEl);
+      slot.style.borderColor = (index === selectedSlotIndex) ? "var(--accent)" : "";
+    });
+  }
+
+  function assignPresetToSlot(slotIndex, presetId) {
+    const preset = RHYTHM_PRESETS.find(p => p.id === parseInt(presetId));
+    if (preset) measureState[slotIndex] = { ...preset };
+  }
+
+  // 拖放監聽
+  slots.forEach(slot => {
+    const slotIdx = parseInt(slot.dataset.slot);
+
+    slot.addEventListener("click", () => {
+      selectedSlotIndex = slotIdx;
+      renderSlots();
+    });
+
+    slot.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      slot.classList.add("drag-over");
+    });
+
+    slot.addEventListener("dragleave", () => {
+      slot.classList.remove("drag-over");
+    });
+
+    slot.addEventListener("drop", (e) => {
+      e.preventDefault();
+      slot.classList.remove("drag-over");
+      const presetId = e.dataTransfer.getData("text/plain");
+      if (presetId) {
+        assignPresetToSlot(slotIdx, presetId);
+        selectedSlotIndex = slotIdx;
+        renderSlots();
+      }
+    });
+  });
+
+  // 音訊引擎
+  let audioCtx = null;
+  let isPlaying = false;
+  let bpm = 90;
+  let currentSubdivision = 0;
+  let nextNoteTime = 0.0;
+  let timerID = null;
+
+  function initAudio() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+  }
+
+  function playTone(time, freq, gainVal, decay = 0.04) {
+    const osc = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+    osc.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+
+    osc.frequency.setValueAtTime(freq, time);
+    gainNode.gain.setValueAtTime(gainVal, time);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, time + decay);
+
+    osc.start(time);
+    osc.stop(time + decay);
+  }
+
+  function scheduleNote(subdivisionIndex, time) {
+    const beatIndex = Math.floor(subdivisionIndex / 4);
+    const sixteenthIndex = subdivisionIndex % 4;
+    const currentPattern = measureState[beatIndex].pattern;
+    const isHit = currentPattern[sixteenthIndex] === 1;
+
+    if (isHit) {
+      if (sixteenthIndex === 0) {
+        const freq = beatIndex === 0 ? 1000 : 750;
+        playTone(time, freq, 0.65, 0.05);
+      } else {
+        playTone(time, 500, 0.28, 0.03);
+      }
+    }
+
+    const drawTime = (time - audioCtx.currentTime) * 1000;
+    setTimeout(() => {
+      if (!isPlaying) return;
+      slots.forEach((s, idx) => {
+        s.classList.toggle("active", idx === beatIndex);
+      });
+    }, Math.max(0, drawTime));
+  }
+
+  function scheduler() {
+    while (nextNoteTime < audioCtx.currentTime + 0.1) {
+      scheduleNote(currentSubdivision, nextNoteTime);
+      const secondsPerSixteenth = (60.0 / bpm) / 4.0;
+      nextNoteTime += secondsPerSixteenth;
+      currentSubdivision = (currentSubdivision + 1) % 16;
+    }
+    timerID = setTimeout(scheduler, 25.0);
+  }
+
+  const playBtn = document.getElementById("playBtn");
+  playBtn.addEventListener("click", () => {
+    initAudio();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+
+    isPlaying = !isPlaying;
+    if (isPlaying) {
+      currentSubdivision = 0;
+      nextNoteTime = audioCtx.currentTime + 0.05;
+      scheduler();
+      playBtn.innerText = "停止 ■";
+      playBtn.classList.add("playing");
+    } else {
+      clearTimeout(timerID);
+      playBtn.innerText = "播放 ▶";
+      playBtn.classList.remove("playing");
+      slots.forEach(s => s.classList.remove("active"));
+    }
+  });
+
+  const bpmSlider = document.getElementById("bpmSlider");
+  const bpmVal = document.getElementById("bpmVal");
+  bpmSlider.addEventListener("input", (e) => {
+    bpm = parseInt(e.target.value);
+    bpmVal.innerText = bpm;
+  });
+
+  document.getElementById("randomBtn").addEventListener("click", () => {
+    for (let i = 0; i < 4; i++) {
+      const randIndex = Math.floor(Math.random() * RHYTHM_PRESETS.length);
+      measureState[i] = { ...RHYTHM_PRESETS[randIndex] };
+    }
+    renderSlots();
+  });
+
+  document.getElementById("clearBtn").addEventListener("click", () => {
+    measureState = [
+      { ...RHYTHM_PRESETS[0] },
+      { ...RHYTHM_PRESETS[0] },
+      { ...RHYTHM_PRESETS[0] },
+      { ...RHYTHM_PRESETS[0] }
+    ];
+    renderSlots();
+  });
+
+  renderSlots();
+</script>
+
+</body>
+</html>
