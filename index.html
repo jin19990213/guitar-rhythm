@@ -422,7 +422,6 @@
 </div>
 
 <script>
-  // 模塊定義：17 號為三連音，其餘為 16 種細分
   const RHYTHM_PRESETS = [
     { id: 1,  isTriplet: false, pattern: [1, 0, 0, 0], desc: "1 _ _ _", name: "四分音符" },
     { id: 2,  isTriplet: false, pattern: [1, 0, 1, 0], desc: "1 _ 3 _", name: "雙八分" },
@@ -440,12 +439,11 @@
     { id: 14, isTriplet: false, pattern: [0, 1, 0, 1], desc: "_ 2 _ 4", name: "交替雙反拍十六" },
     { id: 15, isTriplet: false, pattern: [0, 0, 1, 1], desc: "_ _ 3 4", name: "八分休+雙十六" },
     { id: 16, isTriplet: false, pattern: [0, 1, 1, 1], desc: "_ 2 3 4", name: "十六休+後三連十六" },
-    { id: 17, isTriplet: true,  pattern: [1, 1, 1],    desc: "3 連音",  name: "八分三連音" },
+    { id: 17, isTriplet: true,  pattern: [1, 1, 1],    desc: "1 2 3",   name: "八分三連音" },
   ];
 
   const standardStrum = ["↓", "↑", "↓", "↑"];
 
-  // 樂理繪圖
   function drawRest8(x, y) {
     return `
       <g transform="translate(${x}, ${y}) scale(0.9)">
@@ -713,7 +711,6 @@
       el.dataset.presetId = preset.id;
     }
 
-    // 正確判斷撥弦指示：有彈奏才顯示箭頭，休止顯示為點 "·"
     let strumHtml = '';
     if (preset.isTriplet) {
       strumHtml = `
@@ -747,7 +744,6 @@
     item.className = "palette-item";
     item.draggable = true;
 
-    // 所有項目維持統一圓形編號 (包括 17)
     const numBadge = document.createElement("div");
     numBadge.className = "preset-num";
     numBadge.innerText = preset.id;
