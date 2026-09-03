@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>吉他節奏積木序列器 (三連音+和弦連動版)</title>
+  <title>吉他節奏積木序列器</title>
   <style>
     :root {
       --bg: #121418;
@@ -341,22 +341,14 @@
       justify-content: center;
       margin-bottom: 2px;
     }
-    .preset-num.special {
-      background: rgba(255, 132, 0, 0.2);
-      border-color: var(--accent);
-      color: var(--accent);
-      width: auto;
-      border-radius: 4px;
-      padding: 0 4px;
-    }
   </style>
 </head>
 <body>
 
 <div class="container">
   <header>
-    <h1>吉他十六分節奏積木 (含三連音版)</h1>
-    <p class="sub">16 種全細分 ＋ 特殊八分三連音 (↓↓↓) × 4 小節和弦進行循環</p>
+    <h1>吉他十六分節奏積木</h1>
+    <p class="sub">16 種全細分 ＋ 八分三連音 × 4 小節和弦進行循環</p>
   </header>
 
   <!-- 全域控制面板 -->
@@ -420,17 +412,17 @@
     <div class="beat-slot" data-slot="3"><span class="beat-number">BEAT 4</span></div>
   </div>
 
-  <!-- 模塊庫區 (16 種 + 三連音) -->
+  <!-- 模塊庫區 (1~17 號) -->
   <div>
     <div class="palette-header">
-      <span class="palette-title">點擊或拖曳模塊至上方 4 拍（含特殊三連音）：</span>
+      <span class="palette-title">點擊或拖曳模塊至上方 4 拍：</span>
     </div>
     <div class="palette-grid" id="paletteGrid"></div>
   </div>
 </div>
 
 <script>
-  // 模塊定義：新增第 17 號特殊八分三連音
+  // 模塊定義：17 號為三連音，其餘為 16 種細分
   const RHYTHM_PRESETS = [
     { id: 1,  isTriplet: false, pattern: [1, 0, 0, 0], desc: "1 _ _ _", name: "四分音符" },
     { id: 2,  isTriplet: false, pattern: [1, 0, 1, 0], desc: "1 _ 3 _", name: "雙八分" },
@@ -448,13 +440,12 @@
     { id: 14, isTriplet: false, pattern: [0, 1, 0, 1], desc: "_ 2 _ 4", name: "交替雙反拍十六" },
     { id: 15, isTriplet: false, pattern: [0, 0, 1, 1], desc: "_ _ 3 4", name: "八分休+雙十六" },
     { id: 16, isTriplet: false, pattern: [0, 1, 1, 1], desc: "_ 2 3 4", name: "十六休+後三連十六" },
-    // 特殊：八分三連音 (Triplet)
-    { id: 17, isTriplet: true,  pattern: [1, 1, 1],    desc: "3 連音",  name: "八分三連音", strum: ["↓", "↓", "↓"] },
+    { id: 17, isTriplet: true,  pattern: [1, 1, 1],    desc: "3 連音",  name: "八分三連音" },
   ];
 
-  const defaultStrumSymbols = ["↓", "↑", "↓", "↑"];
+  const standardStrum = ["↓", "↑", "↓", "↑"];
 
-  // 符號繪製函式
+  // 樂理繪圖
   function drawRest8(x, y) {
     return `
       <g transform="translate(${x}, ${y}) scale(0.9)">
@@ -491,17 +482,13 @@
     `;
   }
 
-  // 繪製八分三連音（帶連樑與經典 "3" 標記）
   function drawTripletSVG() {
-    const tx = [22, 55, 88]; // 3 點均分
+    const tx = [22, 55, 88];
     const top = 14;
     const hY = 40;
     return `
-      <!-- 主橫樑 (單粗橫槓) -->
       <line x1="${tx[0]+4.1}" y1="${top}" x2="${tx[2]+4.1}" y2="${top}" stroke="#f1f5f9" stroke-width="3"/>
-      <!-- 三個音符 -->
       ${tx.map(x => drawNote(x, hY, top)).join('')}
-      <!-- 連樑上方的 "3" 標記 -->
       <text x="56" y="9" font-family="-apple-system, sans-serif" font-size="11" font-weight="bold" fill="#ff8400" text-anchor="middle">3</text>
     `;
   }
@@ -726,8 +713,19 @@
       el.dataset.presetId = preset.id;
     }
 
-    const strums = preset.strum || defaultStrumSymbols;
-    const strumHtml = strums.map(s => `<span class="hit">${s}</span>`).join("");
+    // 正確判斷撥弦指示：有彈奏才顯示箭頭，休止顯示為點 "·"
+    let strumHtml = '';
+    if (preset.isTriplet) {
+      strumHtml = `
+        <span class="hit">↓</span>
+        <span class="hit">↓</span>
+        <span class="hit">↓</span>
+      `;
+    } else {
+      strumHtml = preset.pattern.map((hit, idx) => `
+        <span class="${hit ? 'hit' : ''}">${hit ? standardStrum[idx] : '·'}</span>
+      `).join("");
+    }
 
     el.innerHTML = `
       <div class="svg-container">${generateCleanNotationSVG(preset.id)}</div>
@@ -744,19 +742,15 @@
   }
 
   const paletteGrid = document.getElementById("paletteGrid");
-  RHYTHM_PRESETS.forEach((preset, index) => {
+  RHYTHM_PRESETS.forEach((preset) => {
     const item = document.createElement("div");
     item.className = "palette-item";
     item.draggable = true;
 
+    // 所有項目維持統一圓形編號 (包括 17)
     const numBadge = document.createElement("div");
-    if (preset.isTriplet) {
-      numBadge.className = "preset-num special";
-      numBadge.innerText = "三連音";
-    } else {
-      numBadge.className = "preset-num";
-      numBadge.innerText = index + 1;
-    }
+    numBadge.className = "preset-num";
+    numBadge.innerText = preset.id;
     item.appendChild(numBadge);
 
     item.appendChild(createBlockElement(preset, false));
@@ -815,12 +809,12 @@
     });
   });
 
-  // --- Web Audio 節拍引擎（支援八分三連音微排程） ---
+  // --- Web Audio 節拍引擎 ---
   let audioCtx = null;
   let isPlaying = false;
   let bpm = 90;
   let currentMeasure = 0;
-  let currentBeat = 0; // 0, 1, 2, 3
+  let currentBeat = 0;
   let nextBeatTime = 0.0;
   let timerID = null;
 
@@ -887,12 +881,10 @@
     });
   }
 
-  // 核心排程：依據該拍是三連音還是十六分音符分別排程
   function scheduleBeat(measureIdx, beatIdx, startTime, beatDuration) {
     const preset = measureState[beatIdx];
 
     if (preset.isTriplet) {
-      // 八分三連音：該拍精準均分成 3 份
       const subDuration = beatDuration / 3.0;
       for (let i = 0; i < 3; i++) {
         const noteTime = startTime + i * subDuration;
@@ -905,7 +897,6 @@
         }
       }
     } else {
-      // 十六分細分：該拍均分成 4 份
       const subDuration = beatDuration / 4.0;
       for (let i = 0; i < 4; i++) {
         if (preset.pattern[i] === 1) {
@@ -1026,7 +1017,6 @@
     renderSlots();
   });
 
-  // 初始載入
   applyProgression("C", "4536");
   renderSlots();
 </script>
