@@ -3,13 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>吉他節奏序列器 - GP 出版級符號排版</title>
+  <title>吉他節奏積木序列器 (和弦連動版)</title>
   <style>
     :root {
       --bg: #121418;
       --card-bg: #1a1e26;
       --accent: #ff8400;
       --accent-active: #22c55e;
+      --accent-chord: #38bdf8;
       --text: #f1f5f9;
       --text-muted: #8492a6;
       --border: #2d3748;
@@ -30,10 +31,10 @@
       width: 100%;
       display: flex;
       flex-direction: column;
-      gap: 20px;
+      gap: 16px;
     }
     header { text-align: center; }
-    h1 { font-size: 1.6rem; color: var(--accent); margin-bottom: 6px; }
+    h1 { font-size: 1.6rem; color: var(--accent); margin-bottom: 4px; }
     p.sub { font-size: 0.85rem; color: var(--text-muted); }
 
     /* 控制面板 */
@@ -41,19 +42,19 @@
       background: var(--card-bg);
       border: 1px solid var(--border);
       border-radius: 12px;
-      padding: 14px 20px;
+      padding: 12px 18px;
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       justify-content: space-between;
-      gap: 16px;
+      gap: 14px;
     }
-    .btn-group { display: flex; gap: 10px; }
+    .btn-group { display: flex; gap: 8px; }
     button {
       background: #252d3d;
       color: var(--text);
       border: 1px solid var(--border);
-      padding: 10px 18px;
+      padding: 8px 16px;
       border-radius: 8px;
       font-weight: 600;
       cursor: pointer;
@@ -73,12 +74,141 @@
     .bpm-wrapper {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       font-weight: 600;
     }
     input[type=range] { accent-color: var(--accent); cursor: pointer; }
 
-    /* 小節 4 拍軌道區 */
+    /* 和弦軌道區域 (黃色框框位置) */
+    .chord-section {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .chord-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .selector-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    select {
+      background: #252d3d;
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      outline: none;
+      cursor: pointer;
+    }
+    .measure-indicator {
+      font-weight: 700;
+      color: var(--accent-chord);
+    }
+
+    /* 4 個小節卡片 */
+    .chord-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+    .measure-card {
+      background: #151922;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      position: relative;
+      transition: all 0.15s ease;
+    }
+    .measure-card.active-measure {
+      border-color: var(--accent-chord);
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+    }
+    .measure-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .measure-title {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      font-weight: 700;
+    }
+    .split-btn {
+      background: #252d3d;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 2px 6px;
+      font-size: 0.65rem;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .split-btn:hover { color: var(--text); background: #323d52; }
+    .split-btn.active {
+      background: var(--accent-chord);
+      color: #000;
+      border-color: var(--accent-chord);
+    }
+
+    /* 和弦輸入/顯示方塊 */
+    .chord-slots-container {
+      display: flex;
+      gap: 6px;
+      height: 48px;
+    }
+    .chord-box {
+      flex: 1;
+      background: #202634;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      transition: all 0.15s ease;
+    }
+    .chord-box.active-chord {
+      background: rgba(56, 189, 248, 0.2);
+      border-color: var(--accent-chord);
+      box-shadow: inset 0 0 8px rgba(56, 189, 248, 0.3);
+    }
+    .chord-input {
+      width: 90%;
+      background: transparent;
+      border: none;
+      text-align: center;
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--text);
+      outline: none;
+      font-family: inherit;
+    }
+    .chord-input:focus { border-bottom: 1px solid var(--accent-chord); }
+    .chord-beat-hint {
+      position: absolute;
+      bottom: 2px;
+      font-size: 0.55rem;
+      color: var(--text-muted);
+      font-family: monospace;
+    }
+
+    /* 4 拍積木小節軌道區 */
     .measure-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
@@ -88,13 +218,13 @@
       background: var(--card-bg);
       border: 2px dashed var(--border);
       border-radius: 12px;
-      min-height: 160px;
+      min-height: 155px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       position: relative;
-      padding: 8px;
+      padding: 6px;
       cursor: pointer;
       transition: all 0.15s ease;
     }
@@ -129,7 +259,7 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      padding: 4px 0;
+      padding: 2px 0;
     }
     .strum-row {
       display: flex;
@@ -141,7 +271,7 @@
     .strum-row span.hit { color: var(--accent); font-weight: bold; }
     .label-code { font-size: 0.75rem; color: #94a3b8; font-weight: 600; font-family: monospace; }
 
-    /* 庫區 */
+    /* 模塊庫區 */
     .palette-header {
       display: flex;
       justify-content: space-between;
@@ -189,11 +319,11 @@
 
 <div class="container">
   <header>
-    <h1>吉他十六分節奏積木 (清晰排版版)</h1>
-    <p class="sub">加寬排版間距 × 標準休止符輪廓 × 乾淨避讓不重疊</p>
+    <h1>吉他十六分節奏積木 (和弦連動版)</h1>
+    <p class="sub">16 種全細分排列 × 樂理休止符排版 × 4 小節和弦進行循環</p>
   </header>
 
-  <!-- 控制列 -->
+  <!-- 全域控制面板 -->
   <div class="controls">
     <div class="btn-group">
       <button id="playBtn" class="primary">播放 ▶</button>
@@ -206,7 +336,45 @@
     </div>
   </div>
 
-  <!-- 小節 4 拍 -->
+  <!-- 和弦軌道區域 (位於控制列下方、4 拍格子正上方) -->
+  <div class="chord-section">
+    <div class="chord-toolbar">
+      <div class="selector-group">
+        <span>調性:</span>
+        <select id="keySelect">
+          <option value="C">C 大調</option>
+          <option value="G">G 大調</option>
+          <option value="D">D 大調</option>
+          <option value="A">A 大調</option>
+          <option value="E">E 大調</option>
+          <option value="F">F 大調</option>
+          <option value="Bb">B♭ 大調</option>
+          <option value="Am">A 小調</option>
+          <option value="Em">E 小調</option>
+        </select>
+        <span>套路:</span>
+        <select id="progSelect">
+          <option value="4536">流行 4536 (IV - V - IIIm - VIm)</option>
+          <option value="1645">民謠金曲 (I - VIm - IV - V)</option>
+          <option value="1564">王道流行 (I - V - VIm - IV)</option>
+          <option value="6415">抒情進行 (VIm - IV - I - V)</option>
+          <option value="canon_split">卡農進行 (含半小節換和弦)</option>
+          <option value="funk">放克律動 (I7 - IV7 - I7 - V7)</option>
+        </select>
+      </div>
+      <div>
+        <span>當前循環小節: </span>
+        <span class="measure-indicator" id="measureIndicator">MEASURE 1 / 4</span>
+      </div>
+    </div>
+
+    <!-- 4 個小節的和弦卡片 -->
+    <div class="chord-grid" id="chordGrid">
+      <!-- 由 JS 動態生成 4 個小節卡片 -->
+    </div>
+  </div>
+
+  <!-- 4 拍積木小節軌道區 -->
   <div class="measure-grid" id="measureGrid">
     <div class="beat-slot" data-slot="0"><span class="beat-number">BEAT 1</span></div>
     <div class="beat-slot" data-slot="1"><span class="beat-number">BEAT 2</span></div>
@@ -224,6 +392,7 @@
 </div>
 
 <script>
+  // 16 種組合定義
   const RHYTHM_PRESETS = [
     { id: 1,  pattern: [1, 0, 0, 0], desc: "1 _ _ _", name: "四分音符" },
     { id: 2,  pattern: [1, 0, 1, 0], desc: "1 _ 3 _", name: "雙八分" },
@@ -245,8 +414,7 @@
 
   const strumSymbols = ["↓", "↑", "↓", "↑"];
 
-  // 標準出版級音樂符號字型輪廓 (Bravura / SMuFL 標準幾何)
-  // 八分休止符
+  // 出版級標準符號繪製 (SMuFL 幾何)
   function drawRest8(x, y) {
     return `
       <g transform="translate(${x}, ${y}) scale(0.9)">
@@ -256,7 +424,6 @@
     `;
   }
 
-  // 十六分休止符（雙鈎，垂直排開不重疊）
   function drawRest16(x, y) {
     return `
       <g transform="translate(${x}, ${y}) scale(0.9)">
@@ -268,7 +435,6 @@
     `;
   }
 
-  // 四分休止符（俐落幾何折線）
   function drawRestQuarter(x, y) {
     return `
       <g transform="translate(${x}, ${y})">
@@ -278,7 +444,6 @@
     `;
   }
 
-  // 標準音符（實心斜橢圓頭 + 垂直符幹）
   function drawNote(x, headY, stemTop) {
     return `
       <ellipse cx="${x}" cy="${headY}" rx="4.5" ry="3.3" transform="rotate(-18 ${x} ${headY})" fill="#f1f5f9"/>
@@ -286,9 +451,8 @@
     `;
   }
 
-  // 拓寬座標後的精確排版（寬度由 92 拓寬至 110，給予充分橫向留白）
   function generateCleanNotationSVG(id) {
-    const x = [16, 42, 68, 94]; // 拓寬間距至 26px，確保各細分點互不干擾
+    const x = [16, 42, 68, 94];
     const top = 10;
     const b2 = 16;
     const hY = 40;
@@ -297,93 +461,80 @@
     let c = '';
 
     switch(id) {
-      case 1: // 1 _ _ _
+      case 1:
         c += drawNote(55, hY, 12);
         break;
-
-      case 2: // 1 _ 3 _
+      case 2:
         c += `<line x1="${x[0]+4.1}" y1="${top}" x2="${x[2]+4.1}" y2="${top}" stroke="#f1f5f9" stroke-width="3"/>`;
         c += drawNote(x[0], hY, top);
         c += drawNote(x[2], hY, top);
         break;
-
-      case 3: // 1 2 3 4
+      case 3:
         c += `<line x1="${x[0]+4.1}" y1="${top}" x2="${x[3]+4.1}" y2="${top}" stroke="#f1f5f9" stroke-width="3"/>`;
         c += `<line x1="${x[0]+4.1}" y1="${b2}" x2="${x[3]+4.1}" y2="${b2}" stroke="#f1f5f9" stroke-width="2.5"/>`;
         x.forEach(pos => { c += drawNote(pos, hY, top); });
         break;
-
-      case 4: // 1 _ 3 4
+      case 4:
         c += `<line x1="${x[0]+4.1}" y1="${top}" x2="${x[3]+4.1}" y2="${top}" stroke="#f1f5f9" stroke-width="3"/>`;
         c += `<line x1="${x[2]+4.1}" y1="${b2}" x2="${x[3]+4.1}" y2="${b2}" stroke="#f1f5f9" stroke-width="2.5"/>`;
         c += drawNote(x[0], hY, top);
         c += drawNote(x[2], hY, top);
         c += drawNote(x[3], hY, top);
         break;
-
-      case 5: // 1 2 3 _
+      case 5:
         c += `<line x1="${x[0]+4.1}" y1="${top}" x2="${x[2]+4.1}" y2="${top}" stroke="#f1f5f9" stroke-width="3"/>`;
         c += `<line x1="${x[0]+4.1}" y1="${b2}" x2="${x[1]+4.1}" y2="${b2}" stroke="#f1f5f9" stroke-width="2.5"/>`;
         c += drawNote(x[0], hY, top);
         c += drawNote(x[1], hY, top);
         c += drawNote(x[2], hY, top);
         break;
-
-      case 6: // 1 2 _ 4 (夾心十六：橫樑乾淨跳過休止符)
+      case 6:
         c += `<line x1="${x[0]+4.1}" y1="${top}" x2="${x[1]+4.1}" y2="${top}" stroke="#f1f5f9" stroke-width="3"/>`;
         c += `<line x1="${x[0]+4.1}" y1="${b2}" x2="${x[1]+4.1}" y2="${b2}" stroke="#f1f5f9" stroke-width="2.5"/>`;
         c += drawNote(x[0], hY, top);
         c += drawNote(x[1], hY, top);
-        c += drawRest16(x[2], rY); // 第 3 點是十六分休止符
+        c += drawRest16(x[2], rY);
         c += drawNote(x[3], hY, 12);
-        // 第 4 點獨立十六分符尾
         c += `<line x1="${x[3]+4.1}" y1="12" x2="${x[3]+11}" y2="16" stroke="#f1f5f9" stroke-width="2.2"/>`;
         c += `<line x1="${x[3]+4.1}" y1="17" x2="${x[3]+11}" y2="21" stroke="#f1f5f9" stroke-width="2.2"/>`;
         break;
-
-      case 7: // 1 _ _ 4 (前附點)
+      case 7:
         c += `<line x1="${x[0]+4.1}" y1="${top}" x2="${x[3]+4.1}" y2="${top}" stroke="#f1f5f9" stroke-width="3"/>`;
         c += `<line x1="${x[3]+4.1}" y1="${b2}" x2="${x[3]-7}" y2="${b2}" stroke="#f1f5f9" stroke-width="2.5"/>`;
         c += drawNote(x[0], hY, top);
-        c += `<circle cx="${x[0]+11}" cy="${hY}" r="2" fill="#f1f5f9"/>`; // 附點留白獨立
+        c += `<circle cx="${x[0]+11}" cy="${hY}" r="2" fill="#f1f5f9"/>`;
         c += drawNote(x[3], hY, top);
         break;
-
-      case 8: // 1 2 _ _ (前半雙十六 + 八分休止符)
+      case 8:
         c += `<line x1="${x[0]+4.1}" y1="${top}" x2="${x[1]+4.1}" y2="${top}" stroke="#f1f5f9" stroke-width="3"/>`;
         c += `<line x1="${x[0]+4.1}" y1="${b2}" x2="${x[1]+4.1}" y2="${b2}" stroke="#f1f5f9" stroke-width="2.5"/>`;
         c += drawNote(x[0], hY, top);
         c += drawNote(x[1], hY, top);
-        c += drawRest8(81, rY); // 後半拍中央標準八分休止符
+        c += drawRest8(81, rY);
         break;
-
-      case 9: // _ _ _ _
+      case 9:
         c += drawRestQuarter(55, rY);
         break;
-
-      case 10: // _ 2 _ _ (十六休 + 十六音 + 八分休)
+      case 10:
         c += drawRest16(x[0], rY);
         c += drawNote(x[1], hY, 12);
         c += `<line x1="${x[1]+4.1}" y1="12" x2="${x[1]+11}" y2="16" stroke="#f1f5f9" stroke-width="2.2"/>`;
         c += `<line x1="${x[1]+4.1}" y1="17" x2="${x[1]+11}" y2="21" stroke="#f1f5f9" stroke-width="2.2"/>`;
         c += drawRest8(81, rY);
         break;
-
-      case 11: // _ _ 3 _ (八分休 + 八分音)
+      case 11:
         c += drawRest8(29, rY);
         c += drawNote(x[2], hY, 12);
         c += `<line x1="${x[2]+4.1}" y1="12" x2="${x[2]+10}" y2="18" stroke="#f1f5f9" stroke-width="2.2"/>`;
         break;
-
-      case 12: // _ _ _ 4 (附點八分休 + 十六音)
+      case 12:
         c += drawRest8(40, rY);
-        c += `<circle cx="50" cy="${rY+6}" r="2" fill="#94a3b8"/>`; // 附點八分休
+        c += `<circle cx="50" cy="${rY+6}" r="2" fill="#94a3b8"/>`;
         c += drawNote(x[3], hY, 12);
         c += `<line x1="${x[3]+4.1}" y1="12" x2="${x[3]+11}" y2="16" stroke="#f1f5f9" stroke-width="2.2"/>`;
         c += `<line x1="${x[3]+4.1}" y1="17" x2="${x[3]+11}" y2="21" stroke="#f1f5f9" stroke-width="2.2"/>`;
         break;
-
-      case 13: // _ 2 3 _ (十六休 + 雙十六 + 十六休)
+      case 13:
         c += drawRest16(x[0], rY);
         c += `<line x1="${x[1]+4.1}" y1="${top}" x2="${x[2]+4.1}" y2="${top}" stroke="#f1f5f9" stroke-width="3"/>`;
         c += `<line x1="${x[1]+4.1}" y1="${b2}" x2="${x[2]+4.1}" y2="${b2}" stroke="#f1f5f9" stroke-width="2.5"/>`;
@@ -391,8 +542,7 @@
         c += drawNote(x[2], hY, top);
         c += drawRest16(x[3], rY);
         break;
-
-      case 14: // _ 2 _ 4 (交替十六休與音符，無跨越連槓打架)
+      case 14:
         c += drawRest16(x[0], rY);
         c += drawNote(x[1], hY, 12);
         c += `<line x1="${x[1]+4.1}" y1="12" x2="${x[1]+11}" y2="16" stroke="#f1f5f9" stroke-width="2.2"/>`;
@@ -402,16 +552,14 @@
         c += `<line x1="${x[3]+4.1}" y1="12" x2="${x[3]+11}" y2="16" stroke="#f1f5f9" stroke-width="2.2"/>`;
         c += `<line x1="${x[3]+4.1}" y1="17" x2="${x[3]+11}" y2="21" stroke="#f1f5f9" stroke-width="2.2"/>`;
         break;
-
-      case 15: // _ _ 3 4 (八分休 + 雙十六)
+      case 15:
         c += drawRest8(29, rY);
         c += `<line x1="${x[2]+4.1}" y1="${top}" x2="${x[3]+4.1}" y2="${top}" stroke="#f1f5f9" stroke-width="3"/>`;
         c += `<line x1="${x[2]+4.1}" y1="${b2}" x2="${x[3]+4.1}" y2="${b2}" stroke="#f1f5f9" stroke-width="2.5"/>`;
         c += drawNote(x[2], hY, top);
         c += drawNote(x[3], hY, top);
         break;
-
-      case 16: // _ 2 3 4 (十六休 + 三連十六)
+      case 16:
         c += drawRest16(x[0], rY);
         c += `<line x1="${x[1]+4.1}" y1="${top}" x2="${x[3]+4.1}" y2="${top}" stroke="#f1f5f9" stroke-width="3"/>`;
         c += `<line x1="${x[1]+4.1}" y1="${b2}" x2="${x[3]+4.1}" y2="${b2}" stroke="#f1f5f9" stroke-width="2.5"/>`;
@@ -420,18 +568,175 @@
         c += drawNote(x[3], hY, top);
         break;
     }
-
     return `<svg viewBox="0 0 110 56" width="110" height="56">${c}</svg>`;
   }
 
-  // 狀態
+  // --- 和弦進行與調性引擎 ---
+  const CHORD_DEGREE_MAPS = {
+    "C":  { I: "C",  IIm: "Dm", IIIm: "Em", IV: "F",  V: "G",  VIm: "Am", I7: "C7", IV7: "F7", V7: "G7" },
+    "G":  { I: "G",  IIm: "Am", IIIm: "Bm", IV: "C",  V: "D",  VIm: "Em", I7: "G7", IV7: "C7", V7: "D7" },
+    "D":  { I: "D",  IIm: "Em", IIIm: "F#m",IV: "G",  V: "A",  VIm: "Bm", I7: "D7", IV7: "G7", V7: "A7" },
+    "A":  { I: "A",  IIm: "Bm", IIIm: "C#m",IV: "D",  V: "E",  VIm: "F#m",I7: "A7", IV7: "D7", V7: "E7" },
+    "E":  { I: "E",  IIm: "F#m",IIIm: "G#m",IV: "A",  V: "B",  VIm: "C#m",I7: "E7", IV7: "A7", V7: "B7" },
+    "F":  { I: "F",  IIm: "Gm", IIIm: "Am", IV: "Bb", V: "C",  VIm: "Dm", I7: "F7", IV7: "Bb7",V7: "C7" },
+    "Bb": { I: "Bb", IIm: "Cm", IIIm: "Dm", IV: "Eb", V: "F",  VIm: "Gm", I7: "Bb7",IV7: "Eb7",V7: "F7" },
+    "Am": { I: "Am", IIm: "Bdim",IIIm:"C",  IV: "Dm", V: "Em", VIm: "F",  I7: "Am7",IV7: "Dm7",V7: "E7" },
+    "Em": { I: "Em", IIm: "F#dim",IIIm:"G", IV: "Am", V: "Bm", VIm: "C",  I7: "Em7",IV7: "Am7",V7: "B7" }
+  };
+
+  const PRESET_PROGRESSIONS = {
+    "4536": [
+      { split: false, chords: ["IV"] },
+      { split: false, chords: ["V"] },
+      { split: false, chords: ["IIIm"] },
+      { split: false, chords: ["VIm"] }
+    ],
+    "1645": [
+      { split: false, chords: ["I"] },
+      { split: false, chords: ["VIm"] },
+      { split: false, chords: ["IV"] },
+      { split: false, chords: ["V"] }
+    ],
+    "1564": [
+      { split: false, chords: ["I"] },
+      { split: false, chords: ["V"] },
+      { split: false, chords: ["VIm"] },
+      { split: false, chords: ["IV"] }
+    ],
+    "6415": [
+      { split: false, chords: ["VIm"] },
+      { split: false, chords: ["IV"] },
+      { split: false, chords: ["I"] },
+      { split: false, chords: ["V"] }
+    ],
+    "canon_split": [
+      { split: true, chords: ["I", "V"] },
+      { split: true, chords: ["VIm", "IIIm"] },
+      { split: true, chords: ["IV", "I"] },
+      { split: true, chords: ["IV", "V"] }
+    ],
+    "funk": [
+      { split: false, chords: ["I7"] },
+      { split: false, chords: ["IV7"] },
+      { split: false, chords: ["I7"] },
+      { split: false, chords: ["V7"] }
+    ]
+  };
+
+  // 當前 4 小節和弦資料狀態
+  let chordState = [
+    { split: false, chords: ["F", ""] },
+    { split: false, chords: ["G", ""] },
+    { split: false, chords: ["Em", ""] },
+    { split: false, chords: ["Am", ""] }
+  ];
+
+  function applyProgression(key, progKey) {
+    const map = CHORD_DEGREE_MAPS[key] || CHORD_DEGREE_MAPS["C"];
+    const prog = PRESET_PROGRESSIONS[progKey];
+    if (!prog) return;
+
+    chordState = prog.map(item => {
+      return {
+        split: item.split,
+        chords: item.chords.map(deg => map[deg] || deg)
+      };
+    });
+    renderChords();
+  }
+
+  const chordGrid = document.getElementById("chordGrid");
+  function renderChords() {
+    chordGrid.innerHTML = "";
+    chordState.forEach((item, mIdx) => {
+      const card = document.createElement("div");
+      card.className = "measure-card";
+      card.id = `measure-card-${mIdx}`;
+
+      const header = document.createElement("div");
+      header.className = "measure-header";
+      header.innerHTML = `
+        <span class="measure-title">M${mIdx + 1}</span>
+        <button class="split-btn ${item.split ? 'active' : ''}" data-midx="${mIdx}">${item.split ? '單一' : '½ 拆分'}</button>
+      `;
+
+      const slotsContainer = document.createElement("div");
+      slotsContainer.className = "chord-slots-container";
+
+      if (!item.split) {
+        // 單一和弦 (佔滿整小節 4 拍)
+        const box = document.createElement("div");
+        box.className = "chord-box";
+        box.id = `chord-box-${mIdx}-0`;
+        box.innerHTML = `
+          <input type="text" class="chord-input" value="${item.chords[0] || ''}" data-midx="${mIdx}" data-subidx="0">
+          <span class="chord-beat-hint">1-4 拍</span>
+        `;
+        slotsContainer.appendChild(box);
+      } else {
+        // 拆分兩個和弦 (前 2 拍 + 後 2 拍)
+        const box1 = document.createElement("div");
+        box1.className = "chord-box";
+        box1.id = `chord-box-${mIdx}-0`;
+        box1.innerHTML = `
+          <input type="text" class="chord-input" value="${item.chords[0] || ''}" data-midx="${mIdx}" data-subidx="0">
+          <span class="chord-beat-hint">1-2 拍</span>
+        `;
+
+        const box2 = document.createElement("div");
+        box2.className = "chord-box";
+        box2.id = `chord-box-${mIdx}-1`;
+        box2.innerHTML = `
+          <input type="text" class="chord-input" value="${item.chords[1] || ''}" data-midx="${mIdx}" data-subidx="1">
+          <span class="chord-beat-hint">3-4 拍</span>
+        `;
+        slotsContainer.appendChild(box1);
+        slotsContainer.appendChild(box2);
+      }
+
+      card.appendChild(header);
+      card.appendChild(slotsContainer);
+      chordGrid.appendChild(card);
+    });
+
+    // 綁定輸入框與拆分按鈕事件
+    document.querySelectorAll(".split-btn").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        const mIdx = parseInt(e.target.dataset.midx);
+        chordState[mIdx].split = !chordState[mIdx].split;
+        if (chordState[mIdx].split && !chordState[mIdx].chords[1]) {
+          chordState[mIdx].chords[1] = chordState[mIdx].chords[0];
+        }
+        renderChords();
+      });
+    });
+
+    document.querySelectorAll(".chord-input").forEach(input => {
+      input.addEventListener("change", (e) => {
+        const mIdx = parseInt(e.target.dataset.midx);
+        const subIdx = parseInt(e.target.dataset.subidx);
+        chordState[mIdx].chords[subIdx] = e.target.value.trim();
+      });
+    });
+  }
+
+  // 和弦選單連動
+  const keySelect = document.getElementById("keySelect");
+  const progSelect = document.getElementById("progSelect");
+  keySelect.addEventListener("change", () => {
+    applyProgression(keySelect.value, progSelect.value);
+  });
+  progSelect.addEventListener("change", () => {
+    applyProgression(keySelect.value, progSelect.value);
+  });
+
+  // --- 下方 4 拍積木小節與庫 ---
   let measureState = [
     { ...RHYTHM_PRESETS[0] },
     { ...RHYTHM_PRESETS[0] },
     { ...RHYTHM_PRESETS[0] },
     { ...RHYTHM_PRESETS[0] }
   ];
-
   let selectedSlotIndex = 0;
 
   function createBlockElement(preset, draggable = true) {
@@ -460,7 +765,7 @@
     return el;
   }
 
-  // 渲染庫
+  // 渲染積木庫
   const paletteGrid = document.getElementById("paletteGrid");
   RHYTHM_PRESETS.forEach((preset, index) => {
     const item = document.createElement("div");
@@ -487,7 +792,7 @@
     paletteGrid.appendChild(item);
   });
 
-  // 渲染 4 拍
+  // 渲染 4 拍軌道
   const slots = document.querySelectorAll(".beat-slot");
   function renderSlots() {
     slots.forEach((slot, index) => {
@@ -504,24 +809,19 @@
     if (preset) measureState[slotIndex] = { ...preset };
   }
 
-  // 拖放監聽
   slots.forEach(slot => {
     const slotIdx = parseInt(slot.dataset.slot);
-
     slot.addEventListener("click", () => {
       selectedSlotIndex = slotIdx;
       renderSlots();
     });
-
     slot.addEventListener("dragover", (e) => {
       e.preventDefault();
       slot.classList.add("drag-over");
     });
-
     slot.addEventListener("dragleave", () => {
       slot.classList.remove("drag-over");
     });
-
     slot.addEventListener("drop", (e) => {
       e.preventDefault();
       slot.classList.remove("drag-over");
@@ -534,11 +834,12 @@
     });
   });
 
-  // 音訊引擎
+  // --- Web Audio 節拍與和弦連動引擎 ---
   let audioCtx = null;
   let isPlaying = false;
   let bpm = 90;
-  let currentSubdivision = 0;
+  let currentSubdivision = 0; // 0 到 15 (4 拍內的十六分音符細分)
+  let currentMeasure = 0;     // 0 到 3 (4 小節循環)
   let nextNoteTime = 0.0;
   let timerID = null;
 
@@ -562,7 +863,34 @@
     osc.stop(time + decay);
   }
 
-  function scheduleNote(subdivisionIndex, time) {
+  function updateVisuals(measureIdx, beatIdx) {
+    // 1. 更新小節指標
+    document.getElementById("measureIndicator").innerText = `MEASURE ${measureIdx + 1} / 4`;
+
+    // 2. 小節外框高亮
+    document.querySelectorAll(".measure-card").forEach((card, idx) => {
+      card.classList.toggle("active-measure", idx === measureIdx);
+    });
+
+    // 3. 和弦方塊高亮 (精確到前2拍或後2拍)
+    document.querySelectorAll(".chord-box").forEach(box => box.classList.remove("active-chord"));
+    const currentMData = chordState[measureIdx];
+    if (!currentMData.split) {
+      const activeBox = document.getElementById(`chord-box-${measureIdx}-0`);
+      if (activeBox) activeBox.classList.add("active-chord");
+    } else {
+      const subIdx = (beatIdx < 2) ? 0 : 1;
+      const activeBox = document.getElementById(`chord-box-${measureIdx}-${subIdx}`);
+      if (activeBox) activeBox.classList.add("active-chord");
+    }
+
+    // 4. 下方 4 拍格子高亮
+    slots.forEach((s, idx) => {
+      s.classList.toggle("active", idx === beatIdx);
+    });
+  }
+
+  function scheduleNote(measureIdx, subdivisionIndex, time) {
     const beatIndex = Math.floor(subdivisionIndex / 4);
     const sixteenthIndex = subdivisionIndex % 4;
     const currentPattern = measureState[beatIndex].pattern;
@@ -570,32 +898,38 @@
 
     if (isHit) {
       if (sixteenthIndex === 0) {
-        const freq = beatIndex === 0 ? 1000 : 750;
+        // 第一小節的第一拍為最高頻 1100Hz，其餘小節的第一拍 850Hz，其餘拍 700Hz
+        let freq = 700;
+        if (beatIndex === 0) freq = (measureIdx === 0) ? 1100 : 850;
         playTone(time, freq, 0.65, 0.05);
       } else {
-        playTone(time, 500, 0.28, 0.03);
+        playTone(time, 480, 0.25, 0.03);
       }
     }
 
     const drawTime = (time - audioCtx.currentTime) * 1000;
     setTimeout(() => {
       if (!isPlaying) return;
-      slots.forEach((s, idx) => {
-        s.classList.toggle("active", idx === beatIndex);
-      });
+      updateVisuals(measureIdx, beatIndex);
     }, Math.max(0, drawTime));
   }
 
   function scheduler() {
     while (nextNoteTime < audioCtx.currentTime + 0.1) {
-      scheduleNote(currentSubdivision, nextNoteTime);
+      scheduleNote(currentMeasure, currentSubdivision, nextNoteTime);
       const secondsPerSixteenth = (60.0 / bpm) / 4.0;
       nextNoteTime += secondsPerSixteenth;
-      currentSubdivision = (currentSubdivision + 1) % 16;
+
+      currentSubdivision++;
+      if (currentSubdivision >= 16) {
+        currentSubdivision = 0;
+        currentMeasure = (currentMeasure + 1) % 4;
+      }
     }
     timerID = setTimeout(scheduler, 25.0);
   }
 
+  // 控制按鈕綁定
   const playBtn = document.getElementById("playBtn");
   playBtn.addEventListener("click", () => {
     initAudio();
@@ -604,6 +938,7 @@
     isPlaying = !isPlaying;
     if (isPlaying) {
       currentSubdivision = 0;
+      currentMeasure = 0;
       nextNoteTime = audioCtx.currentTime + 0.05;
       scheduler();
       playBtn.innerText = "停止 ■";
@@ -613,6 +948,9 @@
       playBtn.innerText = "播放 ▶";
       playBtn.classList.remove("playing");
       slots.forEach(s => s.classList.remove("active"));
+      document.querySelectorAll(".measure-card").forEach(c => c.classList.remove("active-measure"));
+      document.querySelectorAll(".chord-box").forEach(b => b.classList.remove("active-chord"));
+      document.getElementById("measureIndicator").innerText = "MEASURE 1 / 4";
     }
   });
 
@@ -641,6 +979,8 @@
     renderSlots();
   });
 
+  // 初始化啟動
+  applyProgression("C", "4536");
   renderSlots();
 </script>
 
