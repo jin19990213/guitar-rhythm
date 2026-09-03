@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>吉他節奏積木序列器 (和弦連動版)</title>
+  <title>吉他十六分節奏積木 (預備音連動版)</title>
   <style>
     :root {
       --bg: #121418;
@@ -49,7 +49,7 @@
       justify-content: space-between;
       gap: 14px;
     }
-    .btn-group { display: flex; gap: 8px; }
+    .btn-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     button {
       background: #252d3d;
       color: var(--text);
@@ -71,6 +71,21 @@
       border-color: #ef4444;
       color: #fff;
     }
+
+    /* 預備拍核取方塊標籤 */
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      user-select: none;
+      margin-left: 6px;
+    }
+    .checkbox-label input { accent-color: var(--accent); width: 16px; height: 16px; cursor: pointer; }
+
     .bpm-wrapper {
       display: flex;
       align-items: center;
@@ -79,7 +94,7 @@
     }
     input[type=range] { accent-color: var(--accent); cursor: pointer; }
 
-    /* 和弦軌道區域 (黃色框框位置) */
+    /* 和弦軌道區域 */
     .chord-section {
       background: var(--card-bg);
       border: 1px solid var(--border);
@@ -116,6 +131,15 @@
     .measure-indicator {
       font-weight: 700;
       color: var(--accent-chord);
+      transition: color 0.15s ease;
+    }
+    .measure-indicator.count-in {
+      color: var(--accent);
+      animation: pulse 0.5s infinite alternate;
+    }
+    @keyframes pulse {
+      from { transform: scale(1); }
+      to { transform: scale(1.05); }
     }
 
     /* 4 個小節卡片 */
@@ -165,7 +189,7 @@
       border-color: var(--accent-chord);
     }
 
-    /* 和弦輸入/顯示方塊 */
+    /* 和弦方塊 */
     .chord-slots-container {
       display: flex;
       gap: 6px;
@@ -232,6 +256,11 @@
     .beat-slot.active {
       border-color: var(--accent-active);
       box-shadow: 0 0 16px rgba(34, 197, 94, 0.35);
+      transform: translateY(-2px);
+    }
+    .beat-slot.countin-active {
+      border-color: var(--accent);
+      box-shadow: 0 0 16px rgba(255, 132, 0, 0.5);
       transform: translateY(-2px);
     }
     .beat-number {
@@ -319,8 +348,8 @@
 
 <div class="container">
   <header>
-    <h1>吉他十六分節奏積木 (和弦連動版)</h1>
-    <p class="sub">16 種全細分排列 × 樂理休止符排版 × 4 小節和弦進行循環</p>
+    <h1>吉他十六分節奏積木 (預備音連動版)</h1>
+    <p class="sub">16 種全細分排列 × 4 拍響棒預備拍 × 4 小節和弦進行循環</p>
   </header>
 
   <!-- 全域控制面板 -->
@@ -329,6 +358,10 @@
       <button id="playBtn" class="primary">播放 ▶</button>
       <button id="randomBtn">隨機 🎲</button>
       <button id="clearBtn">重設 (四分音符)</button>
+      <label class="checkbox-label">
+        <input type="checkbox" id="countInCheck" checked>
+        <span>4 拍預備音</span>
+      </label>
     </div>
     <div class="bpm-wrapper">
       <span>BPM: <span id="bpmVal">90</span></span>
@@ -336,7 +369,7 @@
     </div>
   </div>
 
-  <!-- 和弦軌道區域 (位於控制列下方、4 拍格子正上方) -->
+  <!-- 和弦軌道區域 -->
   <div class="chord-section">
     <div class="chord-toolbar">
       <div class="selector-group">
@@ -368,10 +401,8 @@
       </div>
     </div>
 
-    <!-- 4 個小節的和弦卡片 -->
-    <div class="chord-grid" id="chordGrid">
-      <!-- 由 JS 動態生成 4 個小節卡片 -->
-    </div>
+    <!-- 4 個小節卡片 -->
+    <div class="chord-grid" id="chordGrid"></div>
   </div>
 
   <!-- 4 拍積木小節軌道區 -->
@@ -392,7 +423,6 @@
 </div>
 
 <script>
-  // 16 種組合定義
   const RHYTHM_PRESETS = [
     { id: 1,  pattern: [1, 0, 0, 0], desc: "1 _ _ _", name: "四分音符" },
     { id: 2,  pattern: [1, 0, 1, 0], desc: "1 _ 3 _", name: "雙八分" },
@@ -414,7 +444,7 @@
 
   const strumSymbols = ["↓", "↑", "↓", "↑"];
 
-  // 出版級標準符號繪製 (SMuFL 幾何)
+  // 樂理符號繪製
   function drawRest8(x, y) {
     return `
       <g transform="translate(${x}, ${y}) scale(0.9)">
@@ -623,7 +653,6 @@
     ]
   };
 
-  // 當前 4 小節和弦資料狀態
   let chordState = [
     { split: false, chords: ["F", ""] },
     { split: false, chords: ["G", ""] },
@@ -664,7 +693,6 @@
       slotsContainer.className = "chord-slots-container";
 
       if (!item.split) {
-        // 單一和弦 (佔滿整小節 4 拍)
         const box = document.createElement("div");
         box.className = "chord-box";
         box.id = `chord-box-${mIdx}-0`;
@@ -674,7 +702,6 @@
         `;
         slotsContainer.appendChild(box);
       } else {
-        // 拆分兩個和弦 (前 2 拍 + 後 2 拍)
         const box1 = document.createElement("div");
         box1.className = "chord-box";
         box1.id = `chord-box-${mIdx}-0`;
@@ -699,7 +726,6 @@
       chordGrid.appendChild(card);
     });
 
-    // 綁定輸入框與拆分按鈕事件
     document.querySelectorAll(".split-btn").forEach(btn => {
       btn.addEventListener("click", (e) => {
         const mIdx = parseInt(e.target.dataset.midx);
@@ -720,7 +746,6 @@
     });
   }
 
-  // 和弦選單連動
   const keySelect = document.getElementById("keySelect");
   const progSelect = document.getElementById("progSelect");
   keySelect.addEventListener("change", () => {
@@ -730,7 +755,7 @@
     applyProgression(keySelect.value, progSelect.value);
   });
 
-  // --- 下方 4 拍積木小節與庫 ---
+  // --- 4 拍積木軌道與庫 ---
   let measureState = [
     { ...RHYTHM_PRESETS[0] },
     { ...RHYTHM_PRESETS[0] },
@@ -765,7 +790,6 @@
     return el;
   }
 
-  // 渲染積木庫
   const paletteGrid = document.getElementById("paletteGrid");
   RHYTHM_PRESETS.forEach((preset, index) => {
     const item = document.createElement("div");
@@ -792,7 +816,6 @@
     paletteGrid.appendChild(item);
   });
 
-  // 渲染 4 拍軌道
   const slots = document.querySelectorAll(".beat-slot");
   function renderSlots() {
     slots.forEach((slot, index) => {
@@ -834,14 +857,18 @@
     });
   });
 
-  // --- Web Audio 節拍與和弦連動引擎 ---
+  // --- Web Audio 節拍引擎（支援 4 拍預備音） ---
   let audioCtx = null;
   let isPlaying = false;
   let bpm = 90;
-  let currentSubdivision = 0; // 0 到 15 (4 拍內的十六分音符細分)
-  let currentMeasure = 0;     // 0 到 3 (4 小節循環)
+  let currentSubdivision = 0;
+  let currentMeasure = 0;
   let nextNoteTime = 0.0;
   let timerID = null;
+
+  // 預備拍狀態管理
+  let isCountingIn = false;
+  let countInBeat = 0; // 0, 1, 2, 3
 
   function initAudio() {
     if (!audioCtx) {
@@ -864,15 +891,14 @@
   }
 
   function updateVisuals(measureIdx, beatIdx) {
-    // 1. 更新小節指標
-    document.getElementById("measureIndicator").innerText = `MEASURE ${measureIdx + 1} / 4`;
+    const indicator = document.getElementById("measureIndicator");
+    indicator.classList.remove("count-in");
+    indicator.innerText = `MEASURE ${measureIdx + 1} / 4`;
 
-    // 2. 小節外框高亮
     document.querySelectorAll(".measure-card").forEach((card, idx) => {
       card.classList.toggle("active-measure", idx === measureIdx);
     });
 
-    // 3. 和弦方塊高亮 (精確到前2拍或後2拍)
     document.querySelectorAll(".chord-box").forEach(box => box.classList.remove("active-chord"));
     const currentMData = chordState[measureIdx];
     if (!currentMData.split) {
@@ -884,9 +910,23 @@
       if (activeBox) activeBox.classList.add("active-chord");
     }
 
-    // 4. 下方 4 拍格子高亮
     slots.forEach((s, idx) => {
+      s.classList.remove("countin-active");
       s.classList.toggle("active", idx === beatIdx);
+    });
+  }
+
+  function updateCountInVisuals(beatIdx) {
+    const indicator = document.getElementById("measureIndicator");
+    indicator.classList.add("count-in");
+    indicator.innerText = `READY: ${beatIdx + 1} / 4`;
+
+    document.querySelectorAll(".measure-card").forEach(c => c.classList.remove("active-measure"));
+    document.querySelectorAll(".chord-box").forEach(b => b.classList.remove("active-chord"));
+
+    slots.forEach((s, idx) => {
+      s.classList.remove("active");
+      s.classList.toggle("countin-active", idx === beatIdx);
     });
   }
 
@@ -898,7 +938,6 @@
 
     if (isHit) {
       if (sixteenthIndex === 0) {
-        // 第一小節的第一拍為最高頻 1100Hz，其餘小節的第一拍 850Hz，其餘拍 700Hz
         let freq = 700;
         if (beatIndex === 0) freq = (measureIdx === 0) ? 1100 : 850;
         playTone(time, freq, 0.65, 0.05);
@@ -909,34 +948,66 @@
 
     const drawTime = (time - audioCtx.currentTime) * 1000;
     setTimeout(() => {
-      if (!isPlaying) return;
+      if (!isPlaying || isCountingIn) return;
       updateVisuals(measureIdx, beatIndex);
+    }, Math.max(0, drawTime));
+  }
+
+  function scheduleCountIn(beatIdx, time) {
+    // 預備拍聲音：第 1 拍 1300Hz 重音，其餘 950Hz
+    const freq = (beatIdx === 0) ? 1300 : 950;
+    playTone(time, freq, 0.75, 0.06);
+
+    const drawTime = (time - audioCtx.currentTime) * 1000;
+    setTimeout(() => {
+      if (!isPlaying || !isCountingIn) return;
+      updateCountInVisuals(beatIdx);
     }, Math.max(0, drawTime));
   }
 
   function scheduler() {
     while (nextNoteTime < audioCtx.currentTime + 0.1) {
-      scheduleNote(currentMeasure, currentSubdivision, nextNoteTime);
-      const secondsPerSixteenth = (60.0 / bpm) / 4.0;
-      nextNoteTime += secondsPerSixteenth;
+      const secondsPerBeat = 60.0 / bpm;
+      const secondsPerSixteenth = secondsPerBeat / 4.0;
 
-      currentSubdivision++;
-      if (currentSubdivision >= 16) {
-        currentSubdivision = 0;
-        currentMeasure = (currentMeasure + 1) % 4;
+      if (isCountingIn) {
+        // 處於預備拍階段：只響 4 聲正拍
+        scheduleCountIn(countInBeat, nextNoteTime);
+        nextNoteTime += secondsPerBeat;
+        countInBeat++;
+
+        if (countInBeat >= 4) {
+          isCountingIn = false;
+          currentSubdivision = 0;
+          currentMeasure = 0;
+        }
+      } else {
+        // 正式演奏排程
+        scheduleNote(currentMeasure, currentSubdivision, nextNoteTime);
+        nextNoteTime += secondsPerSixteenth;
+
+        currentSubdivision++;
+        if (currentSubdivision >= 16) {
+          currentSubdivision = 0;
+          currentMeasure = (currentMeasure + 1) % 4;
+        }
       }
     }
     timerID = setTimeout(scheduler, 25.0);
   }
 
-  // 控制按鈕綁定
+  // 按鈕控制
   const playBtn = document.getElementById("playBtn");
+  const countInCheck = document.getElementById("countInCheck");
+
   playBtn.addEventListener("click", () => {
     initAudio();
     if (audioCtx.state === "suspended") audioCtx.resume();
 
     isPlaying = !isPlaying;
     if (isPlaying) {
+      isCountingIn = countInCheck.checked;
+      countInBeat = 0;
       currentSubdivision = 0;
       currentMeasure = 0;
       nextNoteTime = audioCtx.currentTime + 0.05;
@@ -947,10 +1018,15 @@
       clearTimeout(timerID);
       playBtn.innerText = "播放 ▶";
       playBtn.classList.remove("playing");
-      slots.forEach(s => s.classList.remove("active"));
+      slots.forEach(s => {
+        s.classList.remove("active");
+        s.classList.remove("countin-active");
+      });
       document.querySelectorAll(".measure-card").forEach(c => c.classList.remove("active-measure"));
       document.querySelectorAll(".chord-box").forEach(b => b.classList.remove("active-chord"));
-      document.getElementById("measureIndicator").innerText = "MEASURE 1 / 4";
+      const indicator = document.getElementById("measureIndicator");
+      indicator.classList.remove("count-in");
+      indicator.innerText = "MEASURE 1 / 4";
     }
   });
 
